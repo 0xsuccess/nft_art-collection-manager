@@ -101,7 +101,7 @@
     (asserts! (and (> size u0) (< size u1000000000)) ERR-INVALID-SIZE)          ;; Size must be a positive value
     (asserts! (and (> (len description) u0) (< (len description) u129)) ERR-INVALID-TITLE)  ;; Description must be between 1 and 128 characters
     (asserts! (are-tags-valid? tags) ERR-INVALID-TITLE)  ;; Validate tags
-
+    
     ;; Store the new art entry
     (map-insert art-storage
       { art-id: new-art-id }
@@ -120,9 +120,70 @@
       { art-id: new-art-id, user: tx-sender }
       { has-access: true }
     )
-
+    
     ;; Increment the total art piece counter
     (var-set total-art-pieces new-art-id)
     (ok new-art-id)  ;; Return the new art ID
+  )
+)
+
+;; Transfer ownership of an art piece
+(define-public (transfer-ownership (art-id uint) (new-owner principal))
+  (let
+    (
+      (art-data (unwrap! (map-get? art-storage { art-id: art-id }) ERR-ART-NOT-FOUND))  ;; Retrieve the art data, or fail if not found
+    )
+    (asserts! (art-exists? art-id) ERR-ART-NOT-FOUND)  ;; Ensure the art exists
+    (asserts! (is-eq (get creator art-data) tx-sender) ERR-UNAUTHORIZED-ACCESS)  ;; Ensure only the creator can transfer ownership
+    
+    ;; Update the art storage with the new owner
+    (map-set art-storage
+      { art-id: art-id }
+      (merge art-data { creator: new-owner })  ;; Update the creator field
+    )
+    (ok true)  ;; Indicate success
+  )
+)
+
+;; Update the details of an existing art piece
+(define-public (update-art (art-id uint) (new-title (string-ascii 64)) (new-size uint) (new-description (string-ascii 128)) (new-tags (list 10 (string-ascii 32))))
+  (let
+    (
+      (art-data (unwrap! (map-get? art-storage { art-id: art-id }) ERR-ART-NOT-FOUND))  ;; Retrieve the art data
+    )
+    ;; Validation checks
+    (asserts! (art-exists? art-id) ERR-ART-NOT-FOUND)  ;; Ensure the art exists
+    (asserts! (is-eq (get creator art-data) tx-sender) ERR-UNAUTHORIZED-ACCESS)  ;; Ensure the creator is the sender
+    (asserts! (and (> (len new-title) u0) (< (len new-title) u65)) ERR-INVALID-TITLE)  ;; Validate the new title
+    (asserts! (and (> new-size u0) (< new-size u1000000000)) ERR-INVALID-SIZE)  ;; Validate the new size
+    (asserts! (and (> (len new-description) u0) (< (len new-description) u129)) ERR-INVALID-TITLE)  ;; Validate the new description
+    (asserts! (are-tags-valid? new-tags) ERR-INVALID-TITLE)  ;; Validate the new tags
+    
+    ;; Update the art data in storage
+    (map-set art-storage
+      { art-id: art-id }
+      (merge art-data { 
+        title: new-title, 
+        size: new-size, 
+        description: new-description, 
+        tags: new-tags 
+      })
+    )
+    (ok true)  ;; Indicate success
+  )
+)
+
+;; Delete an art piece from storage
+(define-public (delete-art (art-id uint))
+  (let
+    (
+      (art-data (unwrap! (map-get? art-storage { art-id: art-id }) ERR-ART-NOT-FOUND))  ;; Retrieve the art data
+    )
+    (asserts! (art-exists? art-id) ERR-ART-NOT-FOUND)  ;; Ensure the art exists
+    (asserts! (is-eq (get creator art-data) tx-sender) ERR-UNAUTHORIZED-ACCESS)  ;; Ensure only the creator can delete the art
+    
+    ;; Remove the art from storage
+    (map-delete art-storage { art-id: art-id })
+    (ok true)  ;; Indicate success
   )
 )
