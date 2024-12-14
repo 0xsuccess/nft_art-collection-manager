@@ -145,6 +145,42 @@
   )
 )
 
+;; Get the details of an art piece by its ID
+(define-public (get-art-details (art-id uint))
+  (let
+    (
+      (art-data (unwrap! (map-get? art-storage { art-id: art-id }) ERR-ART-NOT-FOUND))  ;; Retrieve the art data
+    )
+    (ok art-data)  ;; Return the art data
+  )
+)
+
+;; Check if an art piece exists in the collection by its ID
+(define-public (art-exists (art-id uint))
+  (let
+    (
+      (exists (art-exists? art-id))  ;; Check if the art exists
+    )
+    (asserts! exists ERR-ART-NOT-FOUND)  ;; Assert that the art exists
+    (ok exists)  ;; Return true if the art exists, false otherwise
+  )
+)
+
+;; Get the total number of art pieces in the collection
+(define-public (get-total-art-pieces)
+  (ok (var-get total-art-pieces))  ;; Return the current count of art pieces
+)
+
+;; Check if a user has access to a specific art piece
+(define-public (has-access? (art-id uint) (user principal))
+  (let
+    (
+      (access-data (unwrap! (map-get? access-control { art-id: art-id, user: user }) ERR-NO-ACCESS-PERMISSION))  ;; Retrieve access data
+    )
+    (ok (get has-access access-data))  ;; Return true if the user has access, otherwise false
+  )
+)
+
 ;; Update the details of an existing art piece
 (define-public (update-art (art-id uint) (new-title (string-ascii 64)) (new-size uint) (new-description (string-ascii 128)) (new-tags (list 10 (string-ascii 32))))
   (let
@@ -170,6 +206,16 @@
       })
     )
     (ok true)  ;; Indicate success
+  )
+)
+
+;; Get the creator (owner) of an art piece by its ID
+(define-public (get-art-creator (art-id uint))
+  (let
+    (
+      (art-data (unwrap! (map-get? art-storage { art-id: art-id }) ERR-ART-NOT-FOUND))  ;; Retrieve the art data
+    )
+    (ok (get creator art-data))  ;; Return the creator's principal (address)
   )
 )
 
